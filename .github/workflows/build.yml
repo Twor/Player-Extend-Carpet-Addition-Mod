@@ -26,10 +26,8 @@ jobs:
       - name: make gradle wrapper executable
         if: ${{ runner.os != 'Windows' }}
         run: chmod +x ./gradlew
-      - name: setup Gradle
-        uses: gradle/actions/setup-gradle@v3
       - name: build
-        run: ./gradlew build
+        run: ./gradlew build -Dorg.gradle.java.home=$JAVA_HOME
       - name: capture build artifacts
         if: ${{ runner.os == 'Linux' && matrix.java == '21' }}
         uses: actions/upload-artifact@v4
