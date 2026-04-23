@@ -1,34 +1,28 @@
 {
-	"schemaVersion": 1,
-	"id": "peca",
-	"version": "${version}",
-	"name": "Player Extend Carpet Addition",
-	"description": "",
-	"authors": [
-		"FengLiuFeseliud"
-	],
-	"contact": {
-		"homepage": "https://github.com/FengLiuFeseliud/Player-Extend-Carpet-Addition-Mod",
-		"sources": "https://github.com/FengLiuFeseliud/Player-Extend-Carpet-Addition-Mod"
-	},
-	"license": "MIT",
-	"icon": "assets/peca/icon.png",
-	"environment": "*",
-	"entrypoints": {
-		"main": [
-			"fengliu.peca.PecaMod"
-		]
-	},
-	"mixins": [
-		"peca.mixins.json"
-	],
-	"depends": {
-		"fabricloader": ">=0.14.21",
-		"minecraft": "~1.20",
-		"java": ">=17",
-		"fabric-api": "*"
-	},
-	"suggests": {
-		"another-mod": "*"
-	}
+  "schemaVersion": 1,
+  "id": "peca",
+  "version": "${version}",
+  "name": "Player Extend Carpet Addition",
+  "description": "",
+  "authors": ["FengLiuFeseliud"],
+  "contact": {
+    "homepage": "https://github.com/FengLiuFeseliud/Player-Extend-Carpet-Addition-Mod",
+    "sources": "https://github.com/FengLiuFeseliud/Player-Extend-Carpet-Addition-Mod"
+  },
+  "license": "MIT",
+  "icon": "assets/peca/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["fengliu.peca.PecaMod"]
+  },
+  "mixins": ["peca.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.15.11",
+    "minecraft": "~1.21.11",
+    "java": ">=17",
+    "fabric-api": "*"
+  },
+  "suggests": {
+    "another-mod": "*"
+  }
 }

@@ -1,13 +1,13 @@
 package fengliu.peca.util;
 
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-
 import java.util.List;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 
 public abstract class Page<Type> {
-    protected final ServerCommandSource context;
+
+    protected final CommandSourceStack context;
     protected final List<Type> data;
     protected final int dataSize;
     protected final int limit = 5;
@@ -15,54 +15,79 @@ public abstract class Page<Type> {
     protected int pageCount;
     protected int pageDataIndex = 1;
 
-    public Page(ServerCommandSource context, List<Type> data){
+    public Page(CommandSourceStack context, List<Type> data) {
         this.context = context;
         this.data = data;
         this.dataSize = data.size();
         this.pageCount = (int) Math.ceil((double) data.size() / this.limit);
     }
 
-    public List<Type> getPageData(){
+    public List<Type> getPageData() {
         int offset = this.limit * this.pageIn;
         int toIndex = offset + this.limit;
-        if (toIndex > this.dataSize){
+        if (toIndex > this.dataSize) {
             toIndex = this.dataSize;
         }
         return this.data.subList(offset, toIndex);
     }
 
-    public abstract List<MutableText> putPageData(Type pageData, int index);
+    public abstract List<MutableComponent> putPageData(
+        Type pageData,
+        int index
+    );
 
-    public void look(){
+    public void look() {
         this.pageDataIndex = this.pageIn * this.limit + 1;
-        this.context.sendMessage(Text.translatable("peca.info.page.count", String.format("%s/%s", this.pageIn + 1, this.pageCount)));
+        this.context.sendSystemMessage(
+            Component.translatable(
+                "peca.info.page.count",
+                String.format("%s/%s", this.pageIn + 1, this.pageCount)
+            )
+        );
         this.getPageData().forEach(data -> {
-            this.putPageData(data, this.pageDataIndex).forEach(this.context::sendMessage);
+            this.putPageData(data, this.pageDataIndex).forEach(component ->
+                this.context.sendSystemMessage(component)
+            );
             this.pageDataIndex++;
         });
-        this.context.sendMessage(TextClickUtil.runText(Text.translatable("peca.info.page.prev"), "/peca prev")
-                .append(TextClickUtil.runText(Text.translatable("peca.info.page.next"), "/peca next"))
-                .append(TextClickUtil.suggestText(Text.translatable("peca.info.page.to"), "/peca to ")));
+        this.context.sendSystemMessage(
+            TextClickUtil.runText(
+                Component.translatable("peca.info.page.prev"),
+                "/peca prev"
+            )
+                .append(
+                    TextClickUtil.runText(
+                        Component.translatable("peca.info.page.next"),
+                        "/peca next"
+                    )
+                )
+                .append(
+                    TextClickUtil.suggestText(
+                        Component.translatable("peca.info.page.to"),
+                        "/peca to "
+                    )
+                )
+        );
     }
 
-    public void next(){
-        if (this.pageIn + 1 < this.pageCount){
+    public void next() {
+        if (this.pageIn + 1 < this.pageCount) {
             this.pageIn++;
         }
 
         this.look();
     }
 
-    public void prev(){
-        if (pageIn > 0){
+    public void prev() {
+        if (pageIn > 0) {
             this.pageIn--;
         }
 
         this.look();
     }
 
-    public void to(int toPage){
-        if (this.pageIn + 1 < this.pageCount && toPage > 0){
+    public void to(int toPage) {
+        if (this.pageIn + 1 < this.pageCount && toPage > 0) {
             this.pageIn = toPage;
         }
 

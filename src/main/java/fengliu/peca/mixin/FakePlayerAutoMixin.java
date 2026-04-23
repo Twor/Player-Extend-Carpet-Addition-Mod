@@ -5,14 +5,15 @@ import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.context.CommandContext;
 import fengliu.peca.player.IPlayerAuto;
 import fengliu.peca.player.PlayerAutoType;
-import net.minecraft.registry.RegistryKey;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.GameMode;
-import net.minecraft.world.World;
+import net.minecraft.server.level.ClientInformation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -22,21 +23,32 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * 假人每 tick 执行任务
  */
 @Mixin(EntityPlayerMPFake.class)
-public abstract class FakePlayerAutoMixin extends ServerPlayerEntity implements IPlayerAuto {
-    private PlayerAutoType autoType = PlayerAutoType.STOP;
-    private CommandContext<ServerCommandSource> autoContext;
+public abstract class FakePlayerAutoMixin
+    extends ServerPlayer
+    implements IPlayerAuto
+{
 
-    public FakePlayerAutoMixin(MinecraftServer server, ServerWorld world, GameProfile profile) {
-        super(server, world, profile);
+    private PlayerAutoType autoType = PlayerAutoType.STOP;
+    private CommandContext<CommandSourceStack> autoContext;
+
+    public FakePlayerAutoMixin(
+        MinecraftServer server,
+        ServerLevel world,
+        GameProfile profile,
+        ClientInformation clientInformation
+    ) {
+        super(server, world, profile, clientInformation);
     }
 
-    @Override
     public PlayerAutoType getAutoType() {
         return this.autoType;
     }
 
     @Override
-    public void setAutoType(CommandContext<ServerCommandSource> context, PlayerAutoType type) {
+    public void setAutoType(
+        CommandContext<CommandSourceStack> context,
+        PlayerAutoType type
+    ) {
         this.stopAutoTask();
         this.autoType = type;
         this.autoContext = context;
@@ -44,11 +56,17 @@ public abstract class FakePlayerAutoMixin extends ServerPlayerEntity implements 
 
     @Override
     public void runAutoTask() {
-        this.autoType.runTask(this.autoContext, (EntityPlayerMPFake) (Object) this);
+        this.autoType.runTask(
+            this.autoContext,
+            (EntityPlayerMPFake) (Object) this
+        );
     }
 
     @Override
     public void stopAutoTask() {
-        this.autoType.stopTask(this.autoContext, (EntityPlayerMPFake) (Object) this);
+        this.autoType.stopTask(
+            this.autoContext,
+            (EntityPlayerMPFake) (Object) this
+        );
     }
 }

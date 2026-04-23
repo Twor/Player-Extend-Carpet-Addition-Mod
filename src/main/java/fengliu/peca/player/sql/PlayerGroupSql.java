@@ -12,18 +12,19 @@ import fengliu.peca.player.PlayerGroup;
 import fengliu.peca.util.CommandUtil;
 import fengliu.peca.util.sql.ISqlConnection;
 import fengliu.peca.util.sql.SqlUtil;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.server.network.ServerPlayerEntity;
-import org.jetbrains.annotations.Nullable;
-
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
+import org.jetbrains.annotations.Nullable;
 
 public class PlayerGroupSql {
-    private static final ISqlConnection connection = new PlayerGroupSqlConnection();
+
+    private static final ISqlConnection connection =
+        new PlayerGroupSqlConnection();
 
     /**
      * 保存在表 PLAYER_GROUP 内
@@ -42,20 +43,23 @@ public class PlayerGroupSql {
 
         @Override
         public String getCreateTableSql() {
-            return String.format("""
-                                    CREATE TABLE "%s" (
-                                    	"ID"	INTEGER NOT NULL UNIQUE,
-                                    	"GROUP_NAME"	TEXT NOT NULL,
-                                    	"PLAYERS"	TEXT NOT NULL,
-                                    	"BOT_COUNT"	INTEGER NOT NULL,
-                                    	"PURPOSE"	TEXT NOT NULL,
-                                    	"CREATE_TIME"	TEXT NOT NULL,
-                                    	"CREATE_PLAYER_UUID"	TEXT NOT NULL,
-                                    	"LAST_MODIFIED_TIME"	TEXT NOT NULL,
-                                    	"LAST_MODIFIED_PLAYER_UUID"	TEXT NOT NULL,
-                                    	PRIMARY KEY("ID" AUTOINCREMENT)
-                                    );
-                    """, this.getTableName());
+            return String.format(
+                """
+                                CREATE TABLE "%s" (
+                                	"ID"	INTEGER NOT NULL UNIQUE,
+                                	"GROUP_NAME"	TEXT NOT NULL,
+                                	"PLAYERS"	TEXT NOT NULL,
+                                	"BOT_COUNT"	INTEGER NOT NULL,
+                                	"PURPOSE"	TEXT NOT NULL,
+                                	"CREATE_TIME"	TEXT NOT NULL,
+                                	"CREATE_PLAYER_UUID"	TEXT NOT NULL,
+                                	"LAST_MODIFIED_TIME"	TEXT NOT NULL,
+                                	"LAST_MODIFIED_PLAYER_UUID"	TEXT NOT NULL,
+                                	PRIMARY KEY("ID" AUTOINCREMENT)
+                                );
+                """,
+                this.getTableName()
+            );
         }
     }
 
@@ -71,19 +75,38 @@ public class PlayerGroupSql {
      * @param purpose      保存理由
      * @return 成功 true
      */
-    public static boolean saveGroup(IPlayerGroup playerGroup, ServerPlayerEntity createPlayer, String purpose) {
+    public static boolean saveGroup(
+        IPlayerGroup playerGroup,
+        ServerPlayer createPlayer,
+        String purpose
+    ) {
         Timestamp timestamp = new Timestamp(System.currentTimeMillis());
-        UUID uuid = createPlayer.getUuid();
+        UUID uuid = createPlayer.getUUID();
         JsonArray players = new JsonArray();
 
-        playerGroup.getBots().forEach(bot -> {
-            players.add(PlayerData.fromPlayer(bot).toJson());
-        });
-        return (boolean) connection.executeSpl(statement -> {
-            statement.execute(String.format("""
+        playerGroup
+            .getBots()
+            .forEach(bot -> {
+                players.add(PlayerData.fromPlayer(bot).toJson());
+            });
+        return (boolean) connection.executeSql(statement -> {
+            statement.execute(
+                String.format(
+                    """
                             INSERT INTO %s (GROUP_NAME, PLAYERS, BOT_COUNT, PURPOSE, CREATE_TIME, CREATE_PLAYER_UUID, LAST_MODIFIED_TIME, LAST_MODIFIED_PLAYER_UUID)
                             VALUES ('%s', '%s', %s, '%s', '%s', '%s', '%s', '%s');
-                    """, connection.getTableName(), playerGroup.getName(), players, playerGroup.getAmount(), purpose, timestamp, uuid, timestamp, uuid));
+                    """,
+                    connection.getTableName(),
+                    SqlUtil.sanitize(playerGroup.getName()),
+                    SqlUtil.sanitize(players.toString()),
+                    playerGroup.getAmount(),
+                    SqlUtil.sanitize(purpose),
+                    timestamp,
+                    uuid,
+                    timestamp,
+                    uuid
+                )
+            );
             return true;
         });
     }
@@ -95,8 +118,14 @@ public class PlayerGroupSql {
      * @return 成功 true
      */
     public static boolean deleteGroup(long id) {
-        return (boolean) connection.executeSpl(statement -> {
-            statement.execute(String.format("DELETE FROM %s WHERE ID=%s", connection.getTableName(), id));
+        return (boolean) connection.executeSql(statement -> {
+            statement.execute(
+                String.format(
+                    "DELETE FROM %s WHERE ID=%s",
+                    connection.getTableName(),
+                    id
+                )
+            );
             return true;
         });
     }
@@ -109,8 +138,16 @@ public class PlayerGroupSql {
      * @return 成功 true
      */
     public static boolean spawnGroup(long id, MinecraftServer server) {
-        return (boolean) connection.executeSpl(statement -> {
-            PlayerGroupData playerGroupData = PlayerGroupData.fromResultSet(statement.executeQuery(String.format("SELECT * FROM %s WHERE ID=%s", connection.getTableName(), id))).get(0);
+        return (boolean) connection.executeSql(statement -> {
+            PlayerGroupData playerGroupData = PlayerGroupData.fromResultSet(
+                statement.executeQuery(
+                    String.format(
+                        "SELECT * FROM %s WHERE ID=%s",
+                        connection.getTableName(),
+                        id
+                    )
+                )
+            ).get(0);
             if (PlayerGroup.getGroup(playerGroupData.name()) != null) {
                 return false;
             }
@@ -139,8 +176,16 @@ public class PlayerGroupSql {
         JsonArray playersData = playerGroupData.playersToJsonArray();
         playersData.add(PlayerData.fromPlayer(player).toJson());
 
-        return (boolean) connection.executeSpl(statement -> {
-            statement.execute(String.format("UPDATE %s SET PLAYERS='%s', BOT_COUNT=%s WHERE ID=%S", connection.getTableName(), playersData, playersData.size(), id));
+        return (boolean) connection.executeSql(statement -> {
+            statement.execute(
+                String.format(
+                    "UPDATE %s SET PLAYERS='%s', BOT_COUNT=%s WHERE ID=%S",
+                    connection.getTableName(),
+                    SqlUtil.sanitize(playersData.toString()),
+                    playersData.size(),
+                    id
+                )
+            );
             return true;
         });
     }
@@ -160,13 +205,28 @@ public class PlayerGroupSql {
 
         JsonArray playersData = playerGroupData.playersToJsonArray();
         for (int index = 0; index < playersData.size(); index++) {
-            if (!playersData.get(index).getAsJsonObject().get("name").getAsString().equals(player.getName().getString())) {
+            if (
+                !playersData
+                    .get(index)
+                    .getAsJsonObject()
+                    .get("name")
+                    .getAsString()
+                    .equals(player.getName().getString())
+            ) {
                 continue;
             }
 
             playersData.remove(index);
-            return (boolean) connection.executeSpl(statement -> {
-                statement.execute(String.format("UPDATE %s SET PLAYERS='%s', BOT_COUNT=%s WHERE ID=%S", connection.getTableName(), playersData, playersData.size(), id));
+            return (boolean) connection.executeSql(statement -> {
+                statement.execute(
+                    String.format(
+                        "UPDATE %s SET PLAYERS='%s', BOT_COUNT=%s WHERE ID=%S",
+                        connection.getTableName(),
+                        SqlUtil.sanitize(playersData.toString()),
+                        playersData.size(),
+                        id
+                    )
+                );
                 return true;
             });
         }
@@ -186,7 +246,12 @@ public class PlayerGroupSql {
      * @param name    假人组成员名, 全部更新使用 null
      * @return 成功 true
      */
-    public static boolean updatePlayerExecute(long id, Execute execute, int index, @Nullable String name) {
+    public static boolean updatePlayerExecute(
+        long id,
+        Execute execute,
+        int index,
+        @Nullable String name
+    ) {
         PlayerGroupData playerGroupData = readPlayerGroup(id);
         if (playerGroupData == null) {
             return false;
@@ -197,22 +262,74 @@ public class PlayerGroupSql {
             if (index >= players.size()) {
                 return false;
             }
-            players.get(index).getAsJsonObject().add("execute", execute.run(players.get(index).getAsJsonObject().get("execute").getAsJsonArray(), players.get(index).getAsJsonObject().get("name").getAsString()));
+            players
+                .get(index)
+                .getAsJsonObject()
+                .add(
+                    "execute",
+                    execute.run(
+                        players
+                            .get(index)
+                            .getAsJsonObject()
+                            .get("execute")
+                            .getAsJsonArray(),
+                        players
+                            .get(index)
+                            .getAsJsonObject()
+                            .get("name")
+                            .getAsString()
+                    )
+                );
         } else if (name == null) {
             for (JsonElement data : players) {
-                data.getAsJsonObject().add("execute", execute.run(data.getAsJsonObject().get("execute").getAsJsonArray(), data.getAsJsonObject().get("name").getAsString()));
+                data
+                    .getAsJsonObject()
+                    .add(
+                        "execute",
+                        execute.run(
+                            data
+                                .getAsJsonObject()
+                                .get("execute")
+                                .getAsJsonArray(),
+                            data.getAsJsonObject().get("name").getAsString()
+                        )
+                    );
             }
         } else {
             for (JsonElement data : players) {
-                if (!data.getAsJsonObject().get("name").getAsString().equals(name)) {
+                if (
+                    !data
+                        .getAsJsonObject()
+                        .get("name")
+                        .getAsString()
+                        .equals(name)
+                ) {
                     continue;
                 }
-                data.getAsJsonObject().add("execute", execute.run(data.getAsJsonObject().get("execute").getAsJsonArray(), data.getAsJsonObject().get("name").getAsString()));
+                data
+                    .getAsJsonObject()
+                    .add(
+                        "execute",
+                        execute.run(
+                            data
+                                .getAsJsonObject()
+                                .get("execute")
+                                .getAsJsonArray(),
+                            data.getAsJsonObject().get("name").getAsString()
+                        )
+                    );
             }
         }
 
-        return (boolean) connection.executeSpl(statement -> {
-            statement.execute(String.format("UPDATE %s SET PLAYERS='%s' WHERE ID=%S", connection.getTableName(), players, id));
+        return (boolean) connection.executeSql(statement -> {
+            statement.execute(
+                String.format(
+                    "UPDATE %s SET PLAYERS='%s' WHERE ID=%S",
+                    connection.getTableName(),
+                    SqlUtil.sanitize(players.toString()),
+                    id
+                )
+            );
             return true;
         });
     }
@@ -224,17 +341,29 @@ public class PlayerGroupSql {
      * @param groupName 假人组名, null 不查询假人组名
      * @return 假人组列表
      */
-    private static List<PlayerGroupData> readPlayerGroup(long id, @Nullable String groupName) {
-        SqlUtil.BuildSqlHelper sqlHelper = new SqlUtil.BuildSqlHelper(String.format("SELECT * FROM %s", connection.getTableName()));
+    private static List<PlayerGroupData> readPlayerGroup(
+        long id,
+        @Nullable String groupName
+    ) {
+        SqlUtil.BuildSqlHelper sqlHelper = new SqlUtil.BuildSqlHelper(
+            String.format("SELECT * FROM %s", connection.getTableName())
+        );
         if (groupName != null) {
-            sqlHelper.like("GROUP_NAME", "'%" + groupName + "%'");
+            sqlHelper.like(
+                "GROUP_NAME",
+                "'%" + SqlUtil.sanitize(groupName) + "%'"
+            );
         }
 
         if (id != -1) {
             sqlHelper.and(String.format("ID=%s", id));
         }
 
-        Object sqlData = connection.executeSpl(statement -> PlayerGroupData.fromResultSet(statement.executeQuery(sqlHelper.build())));
+        Object sqlData = connection.executeSql(statement ->
+            PlayerGroupData.fromResultSet(
+                statement.executeQuery(sqlHelper.build())
+            )
+        );
         if (!(sqlData instanceof List<?> dataList)) {
             return new ArrayList<>();
         }
@@ -254,10 +383,15 @@ public class PlayerGroupSql {
      * @param context 指令上下文
      * @return 假人组列表
      */
-    public static List<PlayerGroupData> readPlayerGroup(CommandContext<ServerCommandSource> context) {
+    public static List<PlayerGroupData> readPlayerGroup(
+        CommandContext<CommandSourceStack> context
+    ) {
         return readPlayerGroup(
-                -1,
-                CommandUtil.getArgOrDefault(() -> StringArgumentType.getString(context, "name"), null)
+            -1,
+            CommandUtil.getArgOrDefault(
+                () -> StringArgumentType.getString(context, "name"),
+                null
+            )
         );
     }
 
@@ -267,7 +401,7 @@ public class PlayerGroupSql {
      * @param id 假人组自增 id
      * @return 假人组
      */
-    public static PlayerGroupData readPlayerGroup(long id){
+    public static PlayerGroupData readPlayerGroup(long id) {
         return readPlayerGroup(id, null).get(0);
     }
 }

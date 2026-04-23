@@ -2,24 +2,24 @@ package fengliu.peca.player.sql;
 
 import carpet.patches.EntityPlayerMPFake;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import fengliu.peca.util.CommandUtil;
 import fengliu.peca.util.PlayerUtil;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.GameMode;
-
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * 假人数据
@@ -40,22 +40,21 @@ import java.util.UUID;
  * @param lastModifiedPlayerUuid 最后修改用户游戏 uuid, 只有在数据库单独保存才会存在, 不存在为 null
  */
 public record PlayerData(
-        long id,
-        String name,
-        Identifier dimension,
-        Vec3d pos,
-        double yaw,
-        double pitch,
-        GameMode gamemode,
-        boolean flying,
-        JsonArray execute,
-        String purpose,
-        Timestamp createTime,
-        UUID createPlayerUuid,
-        Timestamp lastModifiedTime,
-        UUID lastModifiedPlayerUuid
+    long id,
+    String name,
+    Identifier dimension,
+    Vec3 pos,
+    double yaw,
+    double pitch,
+    GameType gamemode,
+    boolean flying,
+    JsonArray execute,
+    String purpose,
+    Timestamp createTime,
+    UUID createPlayerUuid,
+    Timestamp lastModifiedTime,
+    UUID lastModifiedPlayerUuid
 ) {
-
     /**
      * 从查询结果表转假人数据列表
      *
@@ -63,25 +62,36 @@ public record PlayerData(
      * @return 假人数据列表
      * @throws SQLException sql 错误
      */
-    public static List<PlayerData> fromResultSet(ResultSet result) throws SQLException {
+    public static List<PlayerData> fromResultSet(ResultSet result)
+        throws SQLException {
         List<PlayerData> playerDates = new ArrayList<>();
         while (result.next()) {
-            playerDates.add(new PlayerData(
+            playerDates.add(
+                new PlayerData(
                     result.getLong("ID"),
                     result.getString("NAME"),
                     Identifier.tryParse(result.getString("DIMENSION")),
-                    new Vec3d(result.getDouble("X"), result.getDouble("Y"), result.getDouble("Z")),
+                    new Vec3(
+                        result.getDouble("X"),
+                        result.getDouble("Y"),
+                        result.getDouble("Z")
+                    ),
                     result.getDouble("FACING_Y"),
                     result.getDouble("FACING_X"),
-                    GameMode.getOrNull(result.getInt("GAME_MODE")),
+                    GameType.byId(result.getInt("GAME_MODE")),
                     result.getBoolean("FLYING"),
-                    JsonParser.parseString(result.getString("EXECUTE")).getAsJsonArray(),
+                    JsonParser.parseString(
+                        result.getString("EXECUTE")
+                    ).getAsJsonArray(),
                     result.getString("PURPOSE"),
                     Timestamp.valueOf(result.getString("CREATE_TIME")),
                     UUID.fromString(result.getString("CREATE_PLAYER_UUID")),
                     Timestamp.valueOf(result.getString("LAST_MODIFIED_TIME")),
-                    UUID.fromString(result.getString("LAST_MODIFIED_PLAYER_UUID"))
-            ));
+                    UUID.fromString(
+                        result.getString("LAST_MODIFIED_PLAYER_UUID")
+                    )
+                )
+            );
         }
         return playerDates;
     }
@@ -92,22 +102,22 @@ public record PlayerData(
      * @param player 玩家
      * @return 假人数据
      */
-    public static PlayerData fromPlayer(ServerPlayerEntity player) {
+    public static PlayerData fromPlayer(ServerPlayer player) {
         return new PlayerData(
-                -1,
-                player.getEntityName(),
-                player.getWorld().getDimensionKey().getValue(),
-                player.getPos(),
-                player.getYaw(),
-                player.getPitch(),
-                player.interactionManager.getGameMode(),
-                player.getAbilities().flying,
-                JsonParser.parseString("[]").getAsJsonArray(),
-                null,
-                null,
-                null,
-                null,
-                null
+            -1,
+            player.getScoreboardName(),
+            player.level().dimension().identifier(),
+            player.position(),
+            player.getYRot(),
+            player.getXRot(),
+            player.gameMode.getGameModeForPlayer(),
+            player.getAbilities().flying,
+            JsonParser.parseString("[]").getAsJsonArray(),
+            null,
+            null,
+            null,
+            null,
+            null
         );
     }
 
@@ -120,20 +130,51 @@ public record PlayerData(
     public static PlayerData fromJson(JsonObject playerJson) {
         JsonObject pos = playerJson.getAsJsonObject("pos");
         return new PlayerData(
-                playerJson.get("id").getAsLong(),
-                playerJson.get("name").getAsString(),
-                Identifier.tryParse(playerJson.get("dimension").getAsString()),
-                new Vec3d(pos.get("x").getAsDouble(), pos.get("y").getAsDouble(), pos.get("z").getAsDouble()),
-                playerJson.get("yaw").getAsDouble(),
-                playerJson.get("pitch").getAsDouble(),
-                GameMode.getOrNull(playerJson.get("gamemode").getAsInt()),
-                playerJson.get("flying").getAsBoolean(),
-                playerJson.getAsJsonArray("execute"),
-                CommandUtil.getArgOrDefault(() -> playerJson.get("purpose").getAsString(), null),
-                CommandUtil.getArgOrDefault(() -> Timestamp.valueOf(playerJson.get("createTime").getAsString()), null),
-                CommandUtil.getArgOrDefault(() -> UUID.fromString(playerJson.get("createPlayerUuid").getAsString()), null),
-                CommandUtil.getArgOrDefault(() -> Timestamp.valueOf(playerJson.get("lastModifiedTime").getAsString()), null),
-                CommandUtil.getArgOrDefault(() -> UUID.fromString(playerJson.get("lastModifiedPlayerUuid").getAsString()), null)
+            playerJson.get("id").getAsLong(),
+            playerJson.get("name").getAsString(),
+            Identifier.tryParse(playerJson.get("dimension").getAsString()),
+            new Vec3(
+                pos.get("x").getAsDouble(),
+                pos.get("y").getAsDouble(),
+                pos.get("z").getAsDouble()
+            ),
+            playerJson.get("yaw").getAsDouble(),
+            playerJson.get("pitch").getAsDouble(),
+            GameType.byId(playerJson.get("gamemode").getAsInt()),
+            playerJson.get("flying").getAsBoolean(),
+            playerJson.getAsJsonArray("execute"),
+            CommandUtil.getArgOrDefault(
+                () -> playerJson.get("purpose").getAsString(),
+                null
+            ),
+            CommandUtil.getArgOrDefault(
+                () ->
+                    Timestamp.valueOf(
+                        playerJson.get("createTime").getAsString()
+                    ),
+                null
+            ),
+            CommandUtil.getArgOrDefault(
+                () ->
+                    UUID.fromString(
+                        playerJson.get("createPlayerUuid").getAsString()
+                    ),
+                null
+            ),
+            CommandUtil.getArgOrDefault(
+                () ->
+                    Timestamp.valueOf(
+                        playerJson.get("lastModifiedTime").getAsString()
+                    ),
+                null
+            ),
+            CommandUtil.getArgOrDefault(
+                () ->
+                    UUID.fromString(
+                        playerJson.get("lastModifiedPlayerUuid").getAsString()
+                    ),
+                null
+            )
         );
     }
 
@@ -159,27 +200,36 @@ public record PlayerData(
         playerJson.addProperty("flying", this.flying);
         playerJson.add("execute", this.execute);
         playerJson.addProperty("purpose", this.purpose);
-        if (this.createTime != null){
+        if (this.createTime != null) {
             playerJson.addProperty("createTime", this.createTime.toString());
         } else {
-            playerJson.add("createTime", null);
+            playerJson.add("createTime", JsonNull.INSTANCE);
         }
 
-        if (this.createPlayerUuid != null){
-            playerJson.addProperty("createPlayerUuid", this.createPlayerUuid.toString());
+        if (this.createPlayerUuid != null) {
+            playerJson.addProperty(
+                "createPlayerUuid",
+                this.createPlayerUuid.toString()
+            );
         } else {
-            playerJson.add("createPlayerUuid", null);
+            playerJson.add("createPlayerUuid", JsonNull.INSTANCE);
         }
 
         if (this.lastModifiedTime != null) {
-            playerJson.addProperty("lastModifiedTime", this.lastModifiedTime.toString());
+            playerJson.addProperty(
+                "lastModifiedTime",
+                this.lastModifiedTime.toString()
+            );
         } else {
-            playerJson.add("lastModifiedTime", null);
+            playerJson.add("lastModifiedTime", JsonNull.INSTANCE);
         }
         if (this.lastModifiedPlayerUuid != null) {
-            playerJson.addProperty("lastModifiedPlayerUuid", this.lastModifiedPlayerUuid.toString());
+            playerJson.addProperty(
+                "lastModifiedPlayerUuid",
+                this.lastModifiedPlayerUuid.toString()
+            );
         } else {
-            playerJson.add("lastModifiedPlayerUuid", null);
+            playerJson.add("lastModifiedPlayerUuid", JsonNull.INSTANCE);
         }
         return playerJson;
     }
@@ -191,9 +241,31 @@ public record PlayerData(
      * @return 假人
      */
     public EntityPlayerMPFake spawn(MinecraftServer server) {
-        if (!PlayerUtil.canSpawn(this.name, server.getPlayerManager())){
+        if (!PlayerUtil.canSpawn(this.name, server.getPlayerList())) {
             return null;
         }
-        return EntityPlayerMPFake.createFake(this.name, server, this.pos, this.yaw, this.pitch, RegistryKey.of(RegistryKeys.WORLD, this.dimension), this.gamemode, this.flying);
+
+        // createFake returns boolean in newer versions
+        boolean success = EntityPlayerMPFake.createFake(
+            this.name,
+            server,
+            this.pos,
+            (float) this.yaw,
+            (float) this.pitch,
+            ResourceKey.create(Registries.DIMENSION, this.dimension),
+            this.gamemode,
+            this.flying
+        );
+
+        if (success) {
+            // Get the created player from the player list
+            ServerPlayer player = server
+                .getPlayerList()
+                .getPlayerByName(this.name);
+            if (player instanceof EntityPlayerMPFake) {
+                return (EntityPlayerMPFake) player;
+            }
+        }
+        return null;
     }
 }

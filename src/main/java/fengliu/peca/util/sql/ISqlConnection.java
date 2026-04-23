@@ -1,14 +1,10 @@
 package fengliu.peca.util.sql;
 
 import fengliu.peca.PecaMod;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.text.Text;
-import net.minecraft.world.World;
-
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.SQLException;
 import java.sql.Statement;
+import net.minecraft.network.chat.Component;
 
 /**
  * sql 连接
@@ -48,7 +44,9 @@ public interface ISqlConnection {
     default Object runSql(Job job) {
         try {
             Class.forName("org.sqlite.JDBC");
-            Connection connection = DriverManager.getConnection(this.getDBUrl());
+            Connection connection = DriverManager.getConnection(
+                this.getDBUrl()
+            );
             Statement statement = connection.createStatement();
             Object data = job.run(statement);
             statement.close();
@@ -67,14 +65,20 @@ public interface ISqlConnection {
      */
     default boolean createTable() {
         return (boolean) this.runSql(statement -> {
-            try {
-                statement.executeQuery(String.format("SELECT name FROM sqlite_master WHERE type='table' AND name='%s';", this.getTableName())).getString(1);
-                return true;
-            } catch (SQLException ignored) {
-            }
-
-            statement.execute(this.getCreateTableSql());
-            PecaMod.LOGGER.info(Text.translatable(String.format("peca.info.sql.not.exist.table.%s", this.getTableName())).getString());
+            statement.execute(
+                this.getCreateTableSql().replace(
+                    "CREATE TABLE",
+                    "CREATE TABLE IF NOT EXISTS"
+                )
+            );
+            PecaMod.LOGGER.info(
+                Component.translatable(
+                    String.format(
+                        "peca.info.sql.not.exist.table.%s",
+                        this.getTableName()
+                    )
+                ).getString()
+            );
             return true;
         });
     }
@@ -85,9 +89,16 @@ public interface ISqlConnection {
      * @param job sql
      * @return 结果
      */
-    default Object executeSpl(Job job) {
+    default Object executeSql(Job job) {
         if (!createTable()) {
-            PecaMod.LOGGER.error(Text.translatable(String.format("peca.info.sql.error.exist.table.%s", this.getTableName())).getString());
+            PecaMod.LOGGER.error(
+                Component.translatable(
+                    String.format(
+                        "peca.info.sql.error.exist.table.%s",
+                        this.getTableName()
+                    )
+                ).getString()
+            );
             return false;
         }
         return runSql(job);

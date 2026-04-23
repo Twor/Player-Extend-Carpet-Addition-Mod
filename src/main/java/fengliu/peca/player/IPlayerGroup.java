@@ -3,7 +3,6 @@ package fengliu.peca.player;
 import carpet.fakes.ServerPlayerInterface;
 import carpet.helpers.EntityPlayerActionPack;
 import carpet.patches.EntityPlayerMPFake;
-
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -11,7 +10,6 @@ import java.util.function.Consumer;
  * 假人组
  */
 public interface IPlayerGroup {
-
     /**
      * 获取假人组所有假人
      *
@@ -65,9 +63,9 @@ public interface IPlayerGroup {
      */
     default EntityPlayerMPFake del(EntityPlayerMPFake player) {
         for (EntityPlayerMPFake fakePlayer : this.getBots()) {
-            if (fakePlayer.getUuid().equals(player.getUuid())) {
+            if (fakePlayer.getUUID().equals(player.getUUID())) {
                 this.getBots().remove(fakePlayer);
-                fakePlayer.kill();
+                fakePlayer.discard();
                 return fakePlayer;
             }
         }
@@ -78,8 +76,7 @@ public interface IPlayerGroup {
      * 杀死组所有假人
      */
     default void kill() {
-        this.getBots().forEach(EntityPlayerMPFake::kill);
-
+        this.getBots().forEach(EntityPlayerMPFake::discard);
     }
 
     /**
@@ -98,7 +95,11 @@ public interface IPlayerGroup {
      *
      * @param action 执行操作
      */
-    default void manipulation(Consumer<EntityPlayerActionPack> action, int start, int end) {
+    default void manipulation(
+        Consumer<EntityPlayerActionPack> action,
+        int start,
+        int end
+    ) {
         this.subBot(start, end).forEach(bot -> {
             action.accept(((ServerPlayerInterface) bot).getActionPack());
         });

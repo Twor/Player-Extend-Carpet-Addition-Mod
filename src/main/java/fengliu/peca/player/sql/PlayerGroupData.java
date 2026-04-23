@@ -77,7 +77,7 @@ public record PlayerGroupData(
      */
     public boolean isInPlayer(EntityPlayerMPFake fakePlayer) {
         for (PlayerData data : this.players) {
-            if (data.name().equals(fakePlayer.getEntityName())) {
+            if (data.name().equals(fakePlayer.getScoreboardName())) {
                 return true;
             }
         }

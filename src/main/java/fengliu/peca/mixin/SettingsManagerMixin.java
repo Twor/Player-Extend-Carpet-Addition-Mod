@@ -4,7 +4,7 @@ import carpet.api.settings.SettingsManager;
 import carpet.utils.Messenger;
 import carpet.utils.Translations;
 import fengliu.peca.PecaMod;
-import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.commands.CommandSourceStack;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -13,19 +13,37 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(SettingsManager.class)
 public class SettingsManagerMixin {
+
     @Inject(
         method = "listAllSettings",
         at = @At(
             value = "INVOKE",
-            target = "Lcarpet/utils/Messenger;m(Lnet/minecraft/server/command/ServerCommandSource;[Ljava/lang/Object;)V",
+            target = "Lcarpet/utils/Messenger;m(Lnet/minecraft/commands/CommandSourceStack;[Ljava/lang/Object;)V",
             shift = At.Shift.AFTER
         ),
         slice = @Slice(
-            from = @At(value = "INVOKE", target = "Lcarpet/api/settings/SettingsManager;listSettings(Lnet/minecraft/server/command/ServerCommandSource;Ljava/lang/String;Ljava/util/Collection;)I"),
-            to = @At(value = "INVOKE", target = "Ljava/util/ArrayList;<init>()V")
+            from = @At(
+                value = "INVOKE",
+                target = "Lcarpet/api/settings/SettingsManager;listSettings(Lnet/minecraft/commands/CommandSourceStack;Ljava/lang/String;Ljava/util/Collection;)I"
+            ),
+            to = @At(
+                value = "INVOKE",
+                target = "Ljava/util/ArrayList;<init>()V"
+            )
         )
     )
-    private void printModVersion(ServerCommandSource source, CallbackInfoReturnable<Integer> cir) {
-        Messenger.m(source, String.format("g %s", Translations.tr("peca.info.version").formatted(PecaMod.MOD_VERSION)));
+    private void printModVersion(
+        CommandSourceStack source,
+        CallbackInfoReturnable<Integer> cir
+    ) {
+        Messenger.m(
+            source,
+            String.format(
+                "g %s",
+                Translations.tr("peca.info.version").formatted(
+                    PecaMod.MOD_VERSION
+                )
+            )
+        );
     }
 }

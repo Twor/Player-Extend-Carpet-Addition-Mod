@@ -1,16 +1,24 @@
 package fengliu.peca.util;
 
-import net.minecraft.text.ClickEvent;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Style;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
 
 public class TextClickUtil {
 
-    public static MutableText runText(MutableText text, String command){
-        return text.setStyle(Style.EMPTY.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, command)));
+    public static MutableComponent runText(
+        MutableComponent text,
+        String command
+    ) {
+        // Temporarily disabled click events
+        return text;
     }
 
-    public static MutableText suggestText(MutableText text, String command){
-        return text.setStyle(Style.EMPTY.withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, command)));
+    public static MutableComponent suggestText(
+        MutableComponent text,
+        String command
+    ) {
+        // Temporarily disabled click events
+        return text;
     }
 }

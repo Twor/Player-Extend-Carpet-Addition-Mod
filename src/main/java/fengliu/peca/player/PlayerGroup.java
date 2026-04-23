@@ -1,5 +1,7 @@
 package fengliu.peca.player;
 
+import static fengliu.peca.util.CommandUtil.getArgOrDefault;
+
 import carpet.patches.EntityPlayerMPFake;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -10,50 +12,75 @@ import fengliu.peca.player.sql.PlayerGroupData;
 import fengliu.peca.player.sql.PlayerGroupSql;
 import fengliu.peca.util.CommandUtil;
 import fengliu.peca.util.PlayerUtil;
-import net.minecraft.command.argument.GameModeArgumentType;
-import net.minecraft.command.argument.Vec3ArgumentType;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.GameMode;
-
 import java.util.ArrayList;
 import java.util.List;
-
-import static fengliu.peca.util.CommandUtil.getArgOrDefault;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.arguments.GameModeArgument;
+import net.minecraft.commands.arguments.coordinates.Vec3Argument;
+import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * 假人组
  */
 public class PlayerGroup implements IPlayerGroup {
+
     private long id = -1;
     public static final List<PlayerGroup> groups = new ArrayList<>();
     public final String groupName;
     protected int groupAmount = 0;
     private final List<EntityPlayerMPFake> bots = new ArrayList<>();
 
-    public PlayerGroup(CommandContext<ServerCommandSource> context, Vec3d[] formationPos){
+    public PlayerGroup(
+        CommandContext<CommandSourceStack> context,
+        Vec3[] formationPos
+    ) {
         this.groupName = StringArgumentType.getString(context, "name");
-        if (!PlayerUtil.canSpawnGroup(this.groupName, context)){
-            context.getSource().sendError(Text.translatable("peca.info.command.error.create.player.group"));
+        if (!PlayerUtil.canSpawnGroup(this.groupName, context)) {
+            context
+                .getSource()
+                .sendFailure(
+                    Component.translatable(
+                        "peca.info.command.error.create.player.group"
+                    )
+                );
             return;
         }
 
         PlayerGroup.groups.add(this);
-        int botAmount = CommandUtil.getArgOrDefault(() -> IntegerArgumentType.getInteger(context, "amount"), -1);
-        if (botAmount == -1){
+        int botAmount = CommandUtil.getArgOrDefault(
+            () -> IntegerArgumentType.getInteger(context, "amount"),
+            -1
+        );
+        if (botAmount == -1) {
             return;
         }
 
-        GameMode mode = getArgOrDefault(() -> GameModeArgumentType.getGameMode(context, "gamemode"), null);
-        if (formationPos == null){
-            Vec3d pos = getArgOrDefault(() -> Vec3ArgumentType.getVec3(context, ""), context.getSource().getPosition());
-            for (int index = 1; index < IntegerArgumentType.getInteger(context, "amount") + 1; index++){
-                EntityPlayerMPFake player = PlayerUtil.spawn(this.groupName + "_" + index, pos, mode, context);
-                if (player == null){
+        GameType mode = getArgOrDefault(
+            () -> GameModeArgument.getGameMode(context, "gamemode"),
+            null
+        );
+        if (formationPos == null) {
+            Vec3 pos = getArgOrDefault(
+                () -> Vec3Argument.getVec3(context, ""),
+                context.getSource().getPosition()
+            );
+            for (
+                int index = 1;
+                index < IntegerArgumentType.getInteger(context, "amount") + 1;
+                index++
+            ) {
+                EntityPlayerMPFake player = PlayerUtil.spawn(
+                    this.groupName + "_" + index,
+                    pos,
+                    mode,
+                    context
+                );
+                if (player == null) {
                     continue;
                 }
                 this.add(player);
@@ -61,23 +88,33 @@ public class PlayerGroup implements IPlayerGroup {
             return;
         }
 
-        for (int index = 1; index < botAmount + 1; index++){
-            EntityPlayerMPFake player = PlayerUtil.spawn(this.groupName + "_" + index, formationPos[index-1], mode, context);
-            if (player == null){
+        for (int index = 1; index < botAmount + 1; index++) {
+            EntityPlayerMPFake player = PlayerUtil.spawn(
+                this.groupName + "_" + index,
+                formationPos[index - 1],
+                mode,
+                context
+            );
+            if (player == null) {
                 continue;
             }
             this.add(player);
         }
     }
 
-    public PlayerGroup(PlayerGroupData playerGroupData, MinecraftServer server) {
+    public PlayerGroup(
+        PlayerGroupData playerGroupData,
+        MinecraftServer server
+    ) {
         this.groupName = playerGroupData.name();
         this.id = playerGroupData.id();
         groups.add(this);
 
-        playerGroupData.players().forEach(playerData -> {
-            this.bots.add(playerData.spawn(server));
-        });
+        playerGroupData
+            .players()
+            .forEach(playerData -> {
+                this.bots.add(playerData.spawn(server));
+            });
     }
 
     /**
@@ -86,7 +123,10 @@ public class PlayerGroup implements IPlayerGroup {
      * @param playerGroupData 假人组数据
      * @param server          服务器实例
      */
-    public static void createGroup(PlayerGroupData playerGroupData, MinecraftServer server) {
+    public static void createGroup(
+        PlayerGroupData playerGroupData,
+        MinecraftServer server
+    ) {
         new PlayerGroup(playerGroupData, server);
     }
 
@@ -97,7 +137,10 @@ public class PlayerGroup implements IPlayerGroup {
      * @param formationPos 假人成员坐标
      * @return Command.SINGLE_SUCCESS
      */
-    public static int createGroup(CommandContext<ServerCommandSource> context, Vec3d[] formationPos) {
+    public static int createGroup(
+        CommandContext<CommandSourceStack> context,
+        Vec3[] formationPos
+    ) {
         new PlayerGroup(context, formationPos);
         return Command.SINGLE_SUCCESS;
     }
@@ -108,7 +151,7 @@ public class PlayerGroup implements IPlayerGroup {
      * @param context 指令上下文
      * @return Command.SINGLE_SUCCESS
      */
-    public static int createGroup(CommandContext<ServerCommandSource> context) {
+    public static int createGroup(CommandContext<CommandSourceStack> context) {
         new PlayerGroup(context, null);
         return Command.SINGLE_SUCCESS;
     }
@@ -125,11 +168,11 @@ public class PlayerGroup implements IPlayerGroup {
 
     @Override
     public void add(EntityPlayerMPFake bot) {
-        if (bot == null){
+        if (bot == null) {
             return;
         }
 
-        if (id != -1){
+        if (id != -1) {
             PlayerGroupSql.addPlayer(id, bot);
         }
 
@@ -140,11 +183,11 @@ public class PlayerGroup implements IPlayerGroup {
     @Override
     public EntityPlayerMPFake del(EntityPlayerMPFake player) {
         EntityPlayerMPFake fakePlayer = IPlayerGroup.super.del(player);
-        if (fakePlayer == null){
+        if (fakePlayer == null) {
             return null;
         }
 
-        if (this.id == -1){
+        if (this.id == -1) {
             return fakePlayer;
         }
 
@@ -177,85 +220,123 @@ public class PlayerGroup implements IPlayerGroup {
      * 假人组队形
      */
     public enum FormationType {
-
         /**
          * 列
          */
-        COLUMN("column", (amount, pos, direction, row, interstice, formationPos) -> {
-            for (int index = 0; index < amount; index++) {
-                formationPos[index] = pos.offset(direction, addInterstice(index, interstice));
+        COLUMN(
+            "column",
+            (amount, pos, direction, row, interstice, formationPos) -> {
+                for (int index = 0; index < amount; index++) {
+                    formationPos[index] = offset(
+                        pos,
+                        direction,
+                        addInterstice(index, interstice)
+                    );
+                }
+                return formationPos;
             }
-            return formationPos;
-        }),
+        ),
 
         /**
          * 可叠加列
          */
-        COLUMN_FOLD("columnFold", (amount, pos, direction, row, interstice, formationPos) -> {
-            int rowIndex = 0;
-            int rowSize = (int) Math.ceil((double) (amount / row));
-            for (int index = 0; index < amount; index++) {
-                if (index % rowSize == 0) {
-                    rowIndex = 0;
+        COLUMN_FOLD(
+            "columnFold",
+            (amount, pos, direction, row, interstice, formationPos) -> {
+                int rowIndex = 0;
+                int rowSize = (int) Math.ceil((double) (amount / row));
+                for (int index = 0; index < amount; index++) {
+                    if (index % rowSize == 0) {
+                        rowIndex = 0;
+                    }
+                    formationPos[index] = offset(
+                        pos,
+                        direction,
+                        addInterstice(rowIndex, interstice)
+                    );
+                    rowIndex++;
                 }
-                formationPos[index] = pos.offset(direction, addInterstice(rowIndex, interstice));
-                rowIndex++;
+                return formationPos;
             }
-            return formationPos;
-        }),
+        ),
 
         /**
          * 行
          */
-        ROW("row", ((amount, pos, direction, row, interstice, formationPos) -> {
-            Direction rowDirection = getRowDirection(direction);
-            for (int index = 0; index < amount; index++) {
-                formationPos[index] = pos.offset(rowDirection, addInterstice(index, interstice));
-            }
-            return formationPos;
-        })),
+        ROW(
+            "row",
+            ((amount, pos, direction, row, interstice, formationPos) -> {
+                Direction rowDirection = getRowDirection(direction);
+                for (int index = 0; index < amount; index++) {
+                    formationPos[index] = offset(
+                        pos,
+                        rowDirection,
+                        addInterstice(index, interstice)
+                    );
+                }
+                return formationPos;
+            })
+        ),
 
         /**
          * 可叠加行
          */
-        ROW_FOLD("rowFold", ((amount, pos, direction, row, interstice, formationPos) -> {
-            int rowIndex = 0;
-            int rowSize = (int) Math.ceil((double) (amount / row));
-            Direction rowDirection = getRowDirection(direction);
-            for (int index = 0; index < amount; index++) {
-                if (index % rowSize == 0) {
-                    rowIndex = 0;
+        ROW_FOLD(
+            "rowFold",
+            ((amount, pos, direction, row, interstice, formationPos) -> {
+                int rowIndex = 0;
+                int rowSize = (int) Math.ceil((double) (amount / row));
+                Direction rowDirection = getRowDirection(direction);
+                for (int index = 0; index < amount; index++) {
+                    if (index % rowSize == 0) {
+                        rowIndex = 0;
+                    }
+                    formationPos[index] = offset(
+                        pos,
+                        rowDirection,
+                        addInterstice(rowIndex, interstice)
+                    );
+                    rowIndex++;
                 }
-                formationPos[index] = pos.offset(rowDirection, addInterstice(rowIndex, interstice));
-                rowIndex++;
-            }
-            return formationPos;
-        })),
+                return formationPos;
+            })
+        ),
 
         /**
          * 四边形
          */
-        QUADRANGLE("quadrangle", (amount, pos, direction, row, interstice, formationPos) -> {
-            int rowIn = 0;
-            int rowIndex = 0;
-            int rowSize = (int) Math.ceil((double) (amount / row));
-            Direction rowDirection = getRowDirection(direction);
-            for (int index = 0; index < amount; index++) {
-                if (index % rowSize == 0) {
-                    rowIn++;
-                    rowIndex = 0;
+        QUADRANGLE(
+            "quadrangle",
+            (amount, pos, direction, row, interstice, formationPos) -> {
+                int rowIn = 0;
+                int rowIndex = 0;
+                int rowSize = (int) Math.ceil((double) (amount / row));
+                Direction rowDirection = getRowDirection(direction);
+                for (int index = 0; index < amount; index++) {
+                    if (index % rowSize == 0) {
+                        rowIn++;
+                        rowIndex = 0;
+                    }
+
+                    formationPos[index] = offset(
+                        offset(
+                            pos,
+                            rowDirection,
+                            addInterstice(rowIndex, interstice)
+                        ),
+                        direction,
+                        addInterstice(rowIn, interstice)
+                    );
+                    rowIndex++;
                 }
-
-                formationPos[index] = pos.offset(rowDirection, addInterstice(rowIndex, interstice)).offset(direction, addInterstice(rowIn, interstice));
-                rowIndex++;
+                return formationPos;
             }
-            return formationPos;
-        });
+        );
 
-        private static Direction getRowDirection(Direction direction){
-            if (direction == Direction.NORTH){
+        private static Direction getRowDirection(Direction direction) {
+            if (direction == Direction.NORTH) {
                 return Direction.EAST;
-            } else if (direction == Direction.WEST){
+            } else if (direction == Direction.WEST) {
                 return Direction.NORTH;
             } else if (direction == Direction.EAST) {
                 return Direction.SOUTH;
@@ -268,11 +349,22 @@ public class PlayerGroup implements IPlayerGroup {
             return index + (interstice * index);
         }
 
+        private static Vec3 offset(
+            Vec3 pos,
+            Direction direction,
+            int distance
+        ) {
+            return pos.add(
+                direction.getStepX() * distance,
+                direction.getStepY() * distance,
+                direction.getStepZ() * distance
+            );
+        }
+
         /**
          * 队形计算
          */
         private interface Formation {
-
             /**
              * 计算队形坐标, 返回队形坐标数组
              *
@@ -284,7 +376,14 @@ public class PlayerGroup implements IPlayerGroup {
              * @param formationPos 队形坐标数组
              * @return 队形坐标数组
              */
-            Vec3d[] get(int amount, Vec3d pos, Direction direction, int row, int interstice, Vec3d[] formationPos);
+            Vec3[] get(
+                int amount,
+                Vec3 pos,
+                Direction direction,
+                int row,
+                int interstice,
+                Vec3[] formationPos
+            );
         }
 
         public final String name;
@@ -308,14 +407,28 @@ public class PlayerGroup implements IPlayerGroup {
          * @param direction 队形方向
          * @return 队形坐标数组
          */
-        public Vec3d[] getFormationPos(CommandContext<ServerCommandSource> context, Direction direction) {
+        public Vec3[] getFormationPos(
+            CommandContext<CommandSourceStack> context,
+            Direction direction
+        ) {
             int amount = IntegerArgumentType.getInteger(context, "amount");
-            return this.formation.get(amount,
-                    getArgOrDefault(() -> Vec3ArgumentType.getVec3(context, "position"), context.getSource().getPosition()),
-                    direction,
-                    getArgOrDefault(() -> IntegerArgumentType.getInteger(context, "row"), 0),
-                    getArgOrDefault(() -> IntegerArgumentType.getInteger(context, "length"), 0),
-                    new Vec3d[amount]);
+            return this.formation.get(
+                amount,
+                getArgOrDefault(
+                    () -> Vec3Argument.getVec3(context, "position"),
+                    context.getSource().getPosition()
+                ),
+                direction,
+                getArgOrDefault(
+                    () -> IntegerArgumentType.getInteger(context, "row"),
+                    0
+                ),
+                getArgOrDefault(
+                    () -> IntegerArgumentType.getInteger(context, "length"),
+                    0
+                ),
+                new Vec3[amount]
+            );
         }
 
         /**
@@ -324,13 +437,18 @@ public class PlayerGroup implements IPlayerGroup {
          * @param context 指令上下文
          * @return 队形方向
          */
-        public Vec3d[] getFormationPos(CommandContext<ServerCommandSource> context) {
-            PlayerEntity player = context.getSource().getPlayer();
+        public Vec3[] getFormationPos(
+            CommandContext<CommandSourceStack> context
+        ) {
+            ServerPlayer player = context.getSource().getPlayer();
             if (player == null) {
                 return null;
             }
 
-            return this.getFormationPos(context, Direction.getLookDirectionForAxis(player, Direction.Axis.Z));
+            return this.getFormationPos(
+                context,
+                Direction.fromYRot(player.getYRot())
+            );
         }
     }
 }
