@@ -3,7 +3,6 @@ package fengliu.peca.player.sql;
 import carpet.patches.EntityPlayerMPFake;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import fengliu.peca.PecaMod;

@@ -39,7 +39,6 @@ import java.util.function.Consumer;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.GameModeArgument;
-import net.minecraft.commands.arguments.coordinates.Coordinates;
 import net.minecraft.commands.arguments.coordinates.RotationArgument;
 import net.minecraft.commands.arguments.coordinates.Vec3Argument;
 import net.minecraft.core.Direction;
@@ -248,7 +247,12 @@ public class PlayerGroupCommand {
                                     context ->
                                         playerGroupManipulation(context, ap ->
                                             ap.look(
-                                                RotationArgument.getRotation(context, "direction").getRotation(context.getSource())
+                                                RotationArgument.getRotation(
+                                                    context,
+                                                    "direction"
+                                                ).getRotation(
+                                                    context.getSource()
+                                                )
                                             )
                                         )
                                 )
@@ -279,7 +283,10 @@ public class PlayerGroupCommand {
                                 context ->
                                     playerGroupManipulation(context, ap ->
                                         ap.turn(
-                                            RotationArgument.getRotation(context, "rotation").getRotation(context.getSource())
+                                            RotationArgument.getRotation(
+                                                context,
+                                                "rotation"
+                                            ).getRotation(context.getSource())
                                         )
                                     )
                             )

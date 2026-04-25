@@ -16,7 +16,6 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.*;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
@@ -99,7 +98,7 @@ public enum PlayerAutoType {
     CRAFT(
         (context, player) -> {
             if (
-                !(player.containerMenu instanceof CraftingMenu crafting) ||
+                !(player.containerMenu instanceof CraftingMenu) ||
                 player.level().getServer() == null
             ) {
                 return;

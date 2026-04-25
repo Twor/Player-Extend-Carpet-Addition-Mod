@@ -7,7 +7,6 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
-import fengliu.peca.player.sql.PlayerData;
 import fengliu.peca.player.sql.PlayerGroupData;
 import fengliu.peca.player.sql.PlayerGroupSql;
 import fengliu.peca.util.CommandUtil;

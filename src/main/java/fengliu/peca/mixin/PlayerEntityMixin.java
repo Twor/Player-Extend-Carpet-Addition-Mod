@@ -1,7 +1,6 @@
 package fengliu.peca.mixin;
 
 import carpet.fakes.ServerPlayerInterface;
-import carpet.helpers.EntityPlayerActionPack;
 import carpet.patches.EntityPlayerMPFake;
 import fengliu.peca.PecaSettings;
 import fengliu.peca.player.IPlayerAuto;
